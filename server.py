@@ -1,43 +1,36 @@
-"""
-This is a simple Flask application for emotion detection.
-"""
+''' A Flask application for Emotion detection using Watson NLP library
+    through our implemented library EmotionDetection, the app is deployed
+    on localhost:5000.
+'''
+from flask import Flask, render_template, request
+from EmotionDetection import emotion_detector
 
-from flask import Flask, render_template, request, jsonify
-from werkzeug.exceptions import HTTPException
-from EmotionDetection.emotion_detection import emotion_detector
+# initiate the flask app
+app = Flask('Emotion Detector')
 
-app = Flask(__name__)
+@app.route("/emotionDetector", methods=['GET'])
+def sent_detector():
+    ''' This code receives text from the HTML interface and
+        runs emotion detector over it using emotion_detector()
+        function.
+        The output returned is a json with the info about score
+        of each emotion and the dominant emotion for the provided text.
+    '''
+    text_to_detect = request.args.get("textToAnalyze")
+    res = emotion_detector(text_to_detect)
+    # Case of invalid input
+    if res['dominant_emotion'] is None:
+        return "Invalid text! Please try again!"
+    return (f"For the given statement, the system response is 'anger': {res['anger']},"
+    f"'disgust': {res['disgust']}, 'fear': {res['fear']}, 'joy': {res['joy']} and "
+    f"'sadness': {res['sadness']}. The dominant emotion is {res['dominant_emotion']}.")
 
-@app.route('/')
-def index():
+@app.route("/")
+def render_index_page():
+    """This function initiates the rendering of the main application
+        page over the Flask channel
     """
-    Render the index.html template.
-    """
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/emotionDetector', methods=['GET', 'POST'])
-def emotion_detector_api():
-    """
-    API endpoint for emotion detection.
-    """
-    try:
-        if request.method == 'POST':
-            data = request.json
-            statement = data.get('statement', '')
-        elif request.method == 'GET':
-            statement = request.args.get('textToAnalyze', '')
-
-        # Handle blank entries
-        if not statement:
-            return jsonify({'error': 'Text is required for analysis.'})
-
-        result = emotion_detector(statement)
-
-        return jsonify(result)
-    except HTTPException as http_err:
-        return jsonify({'error': f'HTTP exception occurred: {http_err.description}'})
-    except Exception as e:
-        return jsonify({'error': f'An error occurred: {e}'})
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
